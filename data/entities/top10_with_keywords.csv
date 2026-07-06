@@ -1,0 +1,11 @@
+﻿concept1_id,concept1_keyword,concept2_id,concept2_keyword,score
+3273,RNN-based encoder-decoder models,30745,single-doc QA,0.5084583163261414
+21635,target-specific stance detection,30934,WMT14 English-French dataset,0.5082969665527344
+1597,CoNLL03 dataset,34266,ICE-NET,0.5082205533981323
+21480,Clozer,32761,major depressive disorder,0.508219301700592
+11622,bag-of-word-based topic models,19998,cross-lingual natural language processing,0.508197009563446
+420,Pointwise Mutual Information,3318,aspect-termsopinion-words separation,0.50807785987854
+15729,radiology report generation,17865,ELMoGAN mapping methods,0.5080499649047852
+10399,hierarchical BiLSTM model,23819,rule-based generation,0.5080391764640808
+8862,document-level RE,19143,ODE-Transformer,0.5079597234725952
+15092,DialogRE dataset,32085,DI,0.5079011917114258
