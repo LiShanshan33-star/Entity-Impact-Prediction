@@ -214,8 +214,6 @@ Open the Jupyter notebooks in src/analysis/ to reproduce the analysis figures an
 
 ---
 
----
-
 ## Notes
 
 - Large intermediate data files (model checkpoints, raw citation data in .gz format, KG_triples.txt, and large prediction CSV files) have been excluded to keep the repository size under GitHub's limit.
