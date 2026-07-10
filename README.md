@@ -10,46 +10,46 @@ This repository contains the complete source code and datasets for predicting th
 
 ```
 Entity-Impact-Prediction/
-??? README.md
-??? .gitignore
-??? src/
-?   ??? hgere/                         # HGERE: Entity & Relation Extraction (adapted)
-?   ?   ??? run_acener.py              # ACE-style NER training script
-?   ?   ??? run_hgnn.py                # Hypergraph neural network for relation extraction
-?   ?   ??? run_pruner.py              # Span pruner training script
-?   ?   ??? utils/
-?   ?   ?   ??? data.py                # Data loading utilities
-?   ?   ??? shells/                    # Training shell scripts for ACE04/ACE05/SciERC
-?   ?
-?   ??? impact4cast/                   # Impact4cast: Impact prediction pipeline (adapted)
-?   ?   ??? features_utils.py          # Feature extraction utilities
-?   ?   ??? generals_utils.py          # General utility functions
-?   ?   ??? generate_datasets.py       # Dataset generation script
-?   ?   ??? idea_generation_utils.py   # Idea/concept generation helpers
-?   ?   ??? train_model_2019_run_transformer.py   # Train on 2019 data
-?   ?   ??? train_model_2022_run_transformer.py   # Train on 2022 data
-?   ?   ??? train_model_utils_transformer.py      # Transformer training utilities
-?   ?   ??? concept_folder/            # Concept extraction helpers
-?   ?   ??? create_dynamic_concepts/   # Dynamic concept creation scripts
-?   ?   ??? create_dynamic_edges/      # Dynamic edge creation & concept pair merging
-?   ?   ??? domain_concept/            # Domain concept extraction pipeline
-?   ?   ??? Entities_Corpus/           # Entity corpus preparation
-?   ?   ??? prepare_eval_data/         # Evaluation data preparation scripts
-?   ?   ??? prepare_other_data/        # Adjacency, pagerank, and prediction utilities
-?   ?
-?   ??? analysis/                      # Custom analysis and visualization code
-?       ??? entity_cleaning_and_category_score_distribution.ipynb
-?       ??? all_entity_pair_score_distribution.ipynb
-?
-??? data/
-    ??? scinlp/                        # SciNLP dataset (EMNLP 2025)
-    ?   ??? train.json                 # Training set
-    ?   ??? dev.json                   # Development set
-    ?   ??? test.json                  # Test set
-    ?
-    ??? entities/                      # Extracted entity data
-        ??? extracted_entities_cleaned_final.csv   # Cleaned entity annotations
-        ??? top10_with_keywords.csv                # Top-10 prediction results with keywords
+├── README.md
+├── .gitignore
+├── src/
+│   ├── hgere/                         # HGERE: Entity & Relation Extraction (adapted)
+│   │   ├── run_acener.py              # ACE-style NER training script
+│   │   ├── run_hgnn.py                # Hypergraph neural network for relation extraction
+│   │   ├── run_pruner.py              # Span pruner training script
+│   │   ├── utils/
+│   │   │   └── data.py                # Data loading utilities
+│   │   └── shells/                    # Training shell scripts for ACE04/ACE05/SciERC
+│   │
+│   ├── impact4cast/                   # Impact4cast: Impact prediction pipeline (adapted)
+│   │   ├── features_utils.py          # Feature extraction utilities
+│   │   ├── generals_utils.py          # General utility functions
+│   │   ├── generate_datasets.py       # Dataset generation script
+│   │   ├── idea_generation_utils.py   # Idea/concept generation helpers
+│   │   ├── train_model_2019_run_transformer.py   # Train on 2019 data
+│   │   ├── train_model_2022_run_transformer.py   # Train on 2022 data
+│   │   ├── train_model_utils_transformer.py      # Transformer training utilities
+│   │   ├── concept_folder/            # Concept extraction helpers
+│   │   ├── create_dynamic_concepts/   # Dynamic concept creation scripts
+│   │   ├── create_dynamic_edges/      # Dynamic edge creation & concept pair merging
+│   │   ├── domain_concept/            # Domain concept extraction pipeline
+│   │   ├── Entities_Corpus/           # Entity corpus preparation
+│   │   ├── prepare_eval_data/         # Evaluation data preparation scripts
+│   │   └── prepare_other_data/        # Adjacency, pagerank, and prediction utilities
+│   │
+│   └── analysis/                      # Custom analysis and visualization code
+│       ├── entity_cleaning_and_category_score_distribution.ipynb
+│       └── all_entity_pair_score_distribution.ipynb
+│
+└── data/
+    ├── scinlp/                        # SciNLP dataset (EMNLP 2025)
+    │   ├── train.json                 # Training set
+    │   ├── dev.json                   # Development set
+    │   └── test.json                  # Test set
+    │
+    └── entities/                      # Extracted entity data
+        ├── extracted_entities_cleaned_final.csv   # Cleaned entity annotations
+        └── top10_with_keywords.csv                # Top-10 prediction results with keywords
 ```
 
 ---
@@ -218,7 +218,7 @@ Open the Jupyter notebooks in src/analysis/ to reproduce the analysis figures an
 
 ## Notes
 
-- Large intermediate data files (model checkpoints, raw citation data in .gz format, KG_triples.txt, and large prediction CSV files) have been excluded to keep the repository size under GitHub's limits.
+- Large intermediate data files (model checkpoints, raw citation data in .gz format, KG_triples.txt, and large prediction CSV files) have been excluded to keep the repository size under GitHub's limit.
 - All source code files include attribution headers indicating their original source and modifications.
 - All comments, variable names, and data headers are in English.
 - For the full raw data or model checkpoints, please refer to the original repositories linked above.
