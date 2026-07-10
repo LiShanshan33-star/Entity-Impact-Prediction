@@ -47,7 +47,7 @@ def make_folders(year_start, split_type, num_class, addition_str):
         folder: 2016_transformer_train, 
         subfolders: t0_c2_log, t0_c2_net, t0_c2_loss, t0_c2_curve, t0_c2_result   
     """
-    # 修改这里：将原来的 year_start + "_" + addition_str 改为 year_start + "_transformer_" + addition_str
+    # Changed: replaced year_start + "_" + addition_str with year_start + "_transformer_" + addition_str
     parent_folder = str(year_start) + "_transformer_" + addition_str
     if not os.path.exists(parent_folder):
         os.mkdir(parent_folder)

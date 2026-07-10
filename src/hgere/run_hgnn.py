@@ -64,7 +64,6 @@ from utils.data import Dataset
 from tqdm import tqdm
 import socket 
 
-import pdb
 
 WEIGHTS_NAME = 'pytorch_model.bin'
 # logger = logging.getLogger(__name__)

@@ -19,11 +19,11 @@ log_folder = 'logs' # log folder
 if not os.path.exists(log_folder):
     os.makedirs(log_folder)
 
-data_folder=r"E:\study\research\ASIST\concept_citation"
+data_folder=r"./data/concept_citation"
 data_file=os.path.join(data_folder,'all_concept_citation.gz')   
 
 
-store_folder=r"H:\ASIST\data_graph"
+store_folder=r"./data/data_graph"
 cwd = os.getcwd()
 parent_dir = os.path.dirname(cwd) # get parent directory
 new_dir_path = os.path.join(parent_dir, store_folder)

@@ -26,7 +26,6 @@ import numpy as np
 import itertools
 
 
-import pdb
 
 WEIGHTS_NAME = 'pytorch_model.bin'
 # logger = logging.getLogger(__name__)
@@ -612,7 +611,7 @@ class Dataset(Dataset):
                         attention_mask[xx, yy] = 1                  # start/end could see each other
                     attention_mask[xx, :L] = 1                      # starts could see all tokens
 
-            # obj_subtoken_pos += [(0, 0)] * (num_pair - len(obj_subtoken_pos))       # sub_subtoken_pos 不会有(0,0), [CLS]使用了0
+            # obj_subtoken_pos += [(0, 0)] * (num_pair - len(obj_subtoken_pos))       # sub_subtoken_pos (0,0), [CLS]0
             
             # rel_labels += [-1] * (num_pair - len(rel_labels))
             # ner_labels += [-1] * (num_pair - len(ner_labels))

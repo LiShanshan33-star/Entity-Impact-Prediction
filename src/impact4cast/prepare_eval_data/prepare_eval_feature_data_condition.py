@@ -6,7 +6,7 @@ Modifications: Bug fixes for checkpoint resume mechanism and dataset adaptation 
 """
 
 import os
-os.chdir(r"E:\study\research\impact4cast_cscl")
+os.chdir(r".")
 import pickle
 import gzip
 import copy

@@ -19,22 +19,22 @@ import sys
 from typing import List, Tuple, Dict, Any, Set
 from multiprocessing import Pool, cpu_count
 import orjson
-import ahocorasick  # 导入AC自动机库
+import ahocorasick  # Import AC automaton library
 
-# ==================== 文本处理函数 ====================
+# ==================== Text Processing Functions ====================
 
-# 预编译替换规则
+# Pre-compiled replacement rules
 REPLACE_PAIRS = [
     ['\n', ' '], ['-', ' '], ['\"a', 'ae'], ['\"o', 'oe'], ['\"u', 'ue'],
     ['\' ', ''], ['\'', ''], ['  ', ' '], ['  ', ' ']
 ]
 
-# 预编译正则表达式
+# Pre-compiled regex patterns
 CLEAN_PATTERNS = [(re.compile(re.escape(pair[0])), pair[1]) for pair in REPLACE_PAIRS]
 
 
 def clean_text_fast(text: str) -> str:
-    """快速文本清洗函数"""
+    """Fast text cleaning function."""
     if not text:
         return ""
     for pattern, replacement in CLEAN_PATTERNS:
@@ -43,13 +43,13 @@ def clean_text_fast(text: str) -> str:
 
 
 def get_single_article_string_optimized(article: Dict) -> str:
-    """优化的文章文本提取函数"""
-    # 获取标题
+    """Optimized article text extraction function."""
+    # Get title
     curr_title = article.get('title', '')
     if curr_title is None:
         curr_title = ''
     
-    # 处理摘要
+    # Process abstract
     abstract_inverted_index = article.get('abstract_inverted_index', {})
     if abstract_inverted_index is None:
         abstract_inverted_index = {}
@@ -72,7 +72,7 @@ def get_single_article_string_optimized(article: Dict) -> str:
         if curr_abstract is None:
             curr_abstract = ''
     
-    # 合并并清洗
+    # Combine and clean
     article_string = f"{str(curr_title)} {str(curr_abstract)}".lower().strip()
     if not article_string:
         return ""
@@ -80,10 +80,10 @@ def get_single_article_string_optimized(article: Dict) -> str:
     return clean_text_fast(article_string)
 
 
-# ==================== 辅助函数 ====================
+# ==================== Helper Functions ====================
 
 def extract_id_from_filename(filename: str, pattern: str) -> int:
-    """从文件名中提取ID"""
+    """Extract ID from filename."""
     match = re.search(pattern, filename)
     if match:
         return int(match.group(1))
@@ -91,7 +91,7 @@ def extract_id_from_filename(filename: str, pattern: str) -> int:
 
 
 def get_date_and_part_from_path(path: str) -> Tuple[str, int]:
-    """从路径中提取日期和部分号"""
+    """Extract date and part number from path."""
     date_folder = os.path.dirname(path)
     date_str = date_folder.split('=')[-1]
     
@@ -102,62 +102,62 @@ def get_date_and_part_from_path(path: str) -> Tuple[str, int]:
 
 
 def build_ac_automaton(concepts: List[str]) -> ahocorasick.Automaton:
-    """使用pyahocorasick构建AC自动机"""
-    print(f"正在构建AC自动机，概念数: {len(concepts)}")
+    """Build AC automaton using pyahocorasick."""
+    print(f"Building AC automaton, concept count: {len(concepts)}")
     start_time = time.time()
     
-    # 创建自动机
+    # Create automaton
     automaton = ahocorasick.Automaton()
     
-    # 添加所有概念词
+    # Add all concept terms
     for idx, concept in enumerate(concepts):
         concept_lower = concept.lower()
-        automaton.add_word(concept_lower, idx)  # 存储概念ID
+        automaton.add_word(concept_lower, idx)  # Store concept ID
     
-    # 构建失败指针
+    # Build failure pointers
     automaton.make_automaton()
     
     build_time = time.time() - start_time
-    print(f"AC自动机构建完成，耗时: {build_time:.2f}秒")
+    print(f"AC automaton build complete, elapsed: {build_time:.2f}s")
     
-    # 不同版本的pyahocorasick有不同的获取大小的方法
+    # Different pyahocorasick versions have different size methods
     try:
-        # 尝试使用size()方法
+        # Try size() method
         node_count = automaton.size()
-        print(f"总节点数: {node_count}")
+        print(f"Total nodes: {node_count}")
     except AttributeError:
         try:
-            # 尝试使用len()方法
+            # Try len() method
             node_count = len(automaton)
-            print(f"总节点数: {node_count}")
+            print(f"Total nodes: {node_count}")
         except:
-            # 如果都不行，就忽略
+            # If neither works, ignore
             pass
     
     return automaton
 
 
 def load_concepts(concepts_file: str) -> Tuple[List[str], ahocorasick.Automaton]:
-    """加载概念列表并构建AC自动机"""
-    print(f"正在读取概念列表: {concepts_file}")
+    """Load concept list and build AC automaton."""
+    print(f"Reading concept list: {concepts_file}")
     with open(concepts_file, 'r', encoding='utf-8') as f:
         concepts = [line.strip() for line in f.readlines() if line.strip()]
     
-    print(f"成功加载 {len(concepts)} 个概念")
+    print(f"Successfully loaded {len(concepts)} concepts")
     
-    # 构建AC自动机
+    # Build AC automaton
     automaton = build_ac_automaton(concepts)
     
     return concepts, automaton
 
 
 def get_completed_files_from_output(output_folder: str, total_files: int) -> Set[int]:
-    """从输出文件夹中获取已完成的文件ID（基于concept_part_XXX.gz文件）"""
+    """Get completed file IDs from output folder (based on concept_part_XXX.gz files)."""
     output_pattern = os.path.join(output_folder, 'concept_part_*.gz')
     
     completed_ids = set()
     for f in glob.glob(output_pattern):
-        # 提取文件ID，例如 concept_part_042.gz -> 42
+        # Extract file ID, e.g. concept_part_042.gz -> 42
         match = re.search(r'concept_part_(\d+)\.gz', os.path.basename(f))
         if match:
             fid = int(match.group(1))
@@ -168,7 +168,7 @@ def get_completed_files_from_output(output_folder: str, total_files: int) -> Set
 
 
 def process_single_file(args):
-    """处理单个文件的函数（用于多进程）- 每个文件只处理前10000行"""
+    """Process a single file (for multiprocessing) - max 10000 lines per file."""
     file_path, file_id, automaton, paper_starting_date = args
     
     base_date = datetime(paper_starting_date.year, 
@@ -181,15 +181,15 @@ def process_single_file(args):
     matched = 0
     file_start_time = time.time()
     
-    # 设置每个文件最大处理行数
+    # Set max lines per file
     MAX_LINES_PER_FILE = 1000
     
     try:
         with gzip.open(file_path, 'rt', encoding='utf-8') as f:
             for line_num, line in enumerate(f):
-                # 只处理前10000行数据
+                # Only process first 10000 lines
                 if line_num >= MAX_LINES_PER_FILE:
-                    print(f"  File {file_id}: 已达到最大处理行数 {MAX_LINES_PER_FILE}，停止处理")
+                    print(f"  File {file_id}: Reached max lines {MAX_LINES_PER_FILE}, stopping")
                     break
                     
                 line = line.strip()
@@ -199,12 +199,12 @@ def process_single_file(args):
                 try:
                     article = orjson.loads(line)
                     
-                    # 检查必要字段
+                    # Check required fields
                     if 'publication_date' not in article:
                         skipped += 1
                         continue
                     
-                    # 解析日期
+                    # Parse date
                     try:
                         pub_date = datetime.strptime(
                             article['publication_date'], 
@@ -215,24 +215,24 @@ def process_single_file(args):
                         skipped += 1
                         continue
                     
-                    # 获取引用信息
+                    # Get citation info
                     total_citations = article.get('cited_by_count', 0)
                     citations_by_year = article.get('counts_by_year', [])
                     
-                    # 提取文章文本
+                    # Extract article text
                     article_text = get_single_article_string_optimized(article)
                     
                     if not article_text:
                         skipped += 1
                         continue
                     
-                    # === AC自动机匹配（核心优化） ===
-                    # 使用迭代器获取所有匹配
+                    # === AC automaton matching (core optimization) ===
+                    # Use iterator to get all matches
                     matched_concepts = set()
                     for end_idx, concept_id in automaton.iter(article_text):
                         matched_concepts.add(concept_id)
                     
-                    # 记录结果
+                    # Record results
                     for concept_id in matched_concepts:
                         local_results.append([
                             concept_id,
@@ -244,9 +244,9 @@ def process_single_file(args):
                     
                     processed += 1
                     
-                    # 每处理1000行打印一次进度
+                    # Print progress every 1000 lines
                     if processed % 1000 == 0:
-                        print(f"  File {file_id}: 已处理 {processed:,} 行, 匹配 {matched:,} 个")
+                        print(f"  File {file_id}: Processed {processed:,} lines, matched {matched:,}")
                     
                 except Exception as e:
                     skipped += 1
@@ -265,7 +265,7 @@ def process_single_file(args):
         }
         
     except Exception as e:
-        print(f"处理文件 {file_path} 时出错: {e}")
+        print(f"Error processing file {file_path}: {e}")
         return {
             'file_id': file_id,
             'file_path': file_path,
@@ -277,7 +277,7 @@ def save_results(results: List[Dict],
                  vertex_folder: str,
                  vertex_folder_log: str,
                  log_folder: str):
-    """保存处理结果，实现断点续写"""
+    """Save processing results, support resume."""
     for result in results:
         if 'error' in result:
             file_id = result['file_id']
@@ -285,19 +285,19 @@ def save_results(results: List[Dict],
             with open(error_log, 'w') as f:
                 f.write(f"Error: {result['error']}\n")
                 f.write(f"File: {result['file_path']}\n")
-            print(f"文件 {file_id:03d} 处理出错: {result['error']}")
+            print(f"File {file_id:03d} error: {result['error']}")
             continue
         
         file_id = result['file_id']
         formatted_id = f"{file_id:03d}"
         
-        # 保存结果
+        # Save results
         if result['edge_lists']:
             output_file = os.path.join(vertex_folder, f'concept_part_{formatted_id}.gz')
             with gzip.open(output_file, 'wb') as f:
                 pickle.dump(result['edge_lists'], f)
             
-            # 保存详细日志
+            # Save detailed log
             log_file = os.path.join(vertex_folder_log, f'concept_part_{formatted_id}.txt')
             with open(log_file, 'w') as f:
                 f.write(f"processed={result['processed']}\n")
@@ -308,17 +308,17 @@ def save_results(results: List[Dict],
                 f.write(f"total_lines={result.get('total_lines', 'N/A')}\n")
                 f.write(f"max_lines_limit={result.get('max_lines_limit', 'N/A')}\n")
             
-            print(f"文件 {formatted_id} 处理完成: "
-                  f"{result['processed']:,} 行, {result['matched']:,} 匹配, "
-                  f"耗时 {result['time']:.2f}s")
+            print(f"File {formatted_id} done: "
+                  f"{result['processed']:,} lines, {result['matched']:,} matches, "
+                  f"elapsed {result['time']:.2f}s")
         else:
-            # 空结果也保存一个空文件标记（避免重复处理）
+            # Save empty file marker for empty results (avoid reprocessing)
             output_file = os.path.join(vertex_folder, f'concept_part_{formatted_id}.gz')
-            # 保存空列表
+            # Save empty list
             with gzip.open(output_file, 'wb') as f:
                 pickle.dump([], f)
             
-            # 记录空结果日志
+            # Log empty results
             empty_log = os.path.join(vertex_folder_log, f'concept_part_{formatted_id}_empty.txt')
             with open(empty_log, 'w') as f:
                 f.write(f"No matches found\n")
@@ -327,51 +327,51 @@ def save_results(results: List[Dict],
                 f.write(f"total_lines={result.get('total_lines', 'N/A')}\n")
                 f.write(f"max_lines_limit={result.get('max_lines_limit', 'N/A')}\n")
             
-            print(f"文件 {formatted_id} 处理完成: 无匹配结果, "
-                  f"{result['processed']:,} 行, 耗时 {result['time']:.2f}s")
+            print(f"File {formatted_id} done: no matches, "
+                  f"{result['processed']:,} lines, elapsed {result['time']:.2f}s")
 
 
 def main():
-    """主函数"""
+    """Main function."""
     print("=" * 60)
-    print("概念引用提取工具 (pyahocorasick极速版 - 每文件10000行限制)")
-    print("断点续跑逻辑: 基于输出文件 concept_part_XXX.gz")
+    print("Concept Citation Extraction Tool (pyahocorasick fast edition - 10000 lines per file limit)")
+    print("Resume logic: based on output file concept_part_XXX.gz")
     print("=" * 60)
     
-    # === 创建必要的文件夹 ===
+    # === Create necessary folders ===
     log_folder = 'logs_concept'
     vertex_folder = 'concept_citation'
     vertex_folder_log = 'concept_citation_log'
     
     for folder in [log_folder, vertex_folder, vertex_folder_log]:
         os.makedirs(folder, exist_ok=True)
-        print(f"确保文件夹存在: {folder}")
+        print(f"Ensuring folder exists: {folder}")
     
-    # === 加载概念列表并构建AC自动机 ===
-    concepts_file = r"E:\study\research\ASIST\entities.txt"
+    # === Load concept list and build AC automaton ===
+    concepts_file = r"./data/entities.txt"
     concepts, automaton = load_concepts(concepts_file)
     
-    # === 设置论文数据路径 ===
-    base_folder = "G:\\openalex-snapshot\\data\\works"
+    # === Set paper data paths ===
+    base_folder = "./data/openalex/works"
     date_pattern = 'updated_date=*'
     file_pattern = 'part_*.gz'
     
-    print(f"\n搜索文件: {base_folder}/{date_pattern}/{file_pattern}")
+    print(f"\nSearching files: {base_folder}/{date_pattern}/{file_pattern}")
     
-    # 查找所有匹配的文件
+    # Find all matching files
     file_paths = glob.glob(f'{base_folder}/{date_pattern}/{file_pattern}')
     
     if not file_paths:
-        print("错误: 未找到文件！")
-        print(f"请检查路径: {base_folder}")
+        print("Error: No files found!")
+        print(f"Check path: {base_folder}")
         sys.exit(1)
     
-    print(f"找到 {len(file_paths)} 个文件")
+    print(f"Found {len(file_paths)} files")
     
-    # 排序文件
+    # Sort files
     file_paths = sorted(file_paths, key=get_date_and_part_from_path)
     
-    # 筛选时间范围
+    # Filter by time range
     start_date = datetime.strptime("2022-12-20", "%Y-%m-%d")
     end_date = datetime.strptime("2025-05-06", "%Y-%m-%d")
     
@@ -382,55 +382,55 @@ def main():
         if start_date <= file_date <= end_date:
             curr_run_file_paths.append(path)
     
-    print(f"筛选后 {len(curr_run_file_paths)} 个文件在时间范围内")
+    print(f"After filtering: {len(curr_run_file_paths)} files in time range")
     
     if not curr_run_file_paths:
-        print("错误: 没有符合条件的文件")
+        print("Error: No matching files")
         sys.exit(1)
     
-    # === 断点续写：检查输出文件夹中已存在的文件 ===
+    # === Resume: check existing files in output folder ===
     completed_ids = get_completed_files_from_output(vertex_folder, len(curr_run_file_paths))
     
-    print(f"\n断点续写检查 (基于输出文件 concept_part_XXX.gz):")
-    print(f"  - 已存在输出文件: {len(completed_ids)} 个")
-    print(f"  - 待处理文件: {len(curr_run_file_paths) - len(completed_ids)} 个")
+    print(f"\nResume check (based on output files concept_part_XXX.gz):")
+    print(f"  - Existing output files: {len(completed_ids)}")
+    print(f"  - Files to process: {len(curr_run_file_paths) - len(completed_ids)}")
     
-    # 构建待处理文件列表
+    # Build list of files to process
     files_to_process = []
     for i, path in enumerate(curr_run_file_paths):
         if i not in completed_ids:
             files_to_process.append((path, i))
         else:
-            print(f"  跳过已完成文件: part_{i:03d}.gz (输出文件已存在)")
+            print(f"  Skipping completed file: part_{i:03d}.gz (output exists)")
     
     if not files_to_process:
-        print("\n所有文件都已处理完成！")
+        print("\nAll files already processed!")
         with open("job_finish.txt", 'a') as f:
             f.write(f'\nFinish all: {datetime.now()}\n')
             f.write(f'Total files: {len(curr_run_file_paths)}\n')
             f.write(f'All files already processed\n')
         return
     
-    print(f"\n开始处理 {len(files_to_process)} 个文件（每文件最多处理10000行）...")
+    print(f"\nProcessing {len(files_to_process)} files (max 10000 lines per file)...")
     
-    # === 参数设置 ===
+    # === Parameter setup ===
     paper_starting_date = date(1990, 1, 1)
     
-    # === 随机延时启动 ===
+    # === Random delay start ===
     delay = random.random() * 50
-    print(f"延时启动 {delay:.1f} 秒...")
+    print(f"Delaying start {delay:.1f}s...")
     time.sleep(delay)
     
-    # === 使用多进程处理 ===
+    # === Multiprocessing ===
     num_processes = min(4, len(files_to_process)) 
-    print(f"\n多进程配置:")
-    print(f"  - CPU核心数: {cpu_count()}")
-    print(f"  - 使用进程数: {num_processes}")
-    print(f"  - 待处理文件: {len(files_to_process)}")
-    print(f"  - 每文件最大行数: 10000")
-    print(f"  - 断点续跑: 基于输出文件存在性检查")
+    print(f"\nMultiprocess config:")
+    print(f"  - CPU cores: {cpu_count()}")
+    print(f"  - Processes used: {num_processes}")
+    print(f"  - Files to process: {len(files_to_process)}")
+    print(f"  - Max lines per file: 10000")
+    print(f"  - Resume: based on output file existence check")
     
-    # 准备参数
+    # Prepare args
     process_args = []
     for file_path, file_id in files_to_process:
         process_args.append((file_path, file_id, automaton, paper_starting_date))
@@ -438,45 +438,45 @@ def main():
     all_results = []
     start_total = time.time()
     
-    # 使用进程池并行处理
+    # Use process pool for parallel processing
     with Pool(processes=num_processes) as pool:
-        # 使用imap_unordered实时获取结果
+        # Use imap_unordered for real-time results
         for i, result in enumerate(pool.imap_unordered(process_single_file, process_args)):
-            # 立即保存每个结果
+            # Save each result immediately
             save_results([result], vertex_folder, vertex_folder_log, log_folder)
             all_results.append(result)
             
-            # 打印进度
+            # Print progress
             progress = (i + 1) / len(process_args) * 100
             elapsed = time.time() - start_total
             eta = (elapsed / (i + 1)) * (len(process_args) - i - 1) if i > 0 else 0
             
-            print(f"\n▶ 整体进度: {progress:.1f}% ({i+1}/{len(process_args)})")
-            print(f"   已用时间: {elapsed/3600:.2f}小时, 预计剩余: {eta/3600:.2f}小时")
+            print(f"\n> Overall progress: {progress:.1f}% ({i+1}/{len(process_args)})")
+            print(f"   Elapsed: {elapsed/3600:.2f}h, ETA: {eta/3600:.2f}h")
     
     total_time = time.time() - start_total
     
-    # === 统计信息 ===
+    # === Summary statistics ===
     total_processed = sum(r.get('processed', 0) for r in all_results)
     total_matched = sum(r.get('matched', 0) for r in all_results)
     total_skipped = sum(r.get('skipped', 0) for r in all_results)
     total_lines = sum(r.get('total_lines', 0) for r in all_results)
     
     print("\n" + "=" * 60)
-    print("处理完成！")
+    print("Processing complete!")
     print("=" * 60)
-    print(f"总耗时: {total_time / 3600:.2f} 小时")
-    print(f"总处理行数: {total_processed:,}")
-    print(f"总匹配数: {total_matched:,}")
-    print(f"总跳过数: {total_skipped:,}")
-    print(f"文件总行数: {total_lines:,}")
-    print(f"平均处理速度: {total_processed / total_time:.0f} 行/秒")
-    print(f"每文件平均时间: {total_time / len(process_args):.1f} 秒")
-    print(f"每文件最大行数限制: 10000")
-    print(f"断点续跑: 基于输出文件")
+    print(f"Total time: {total_time / 3600:.2f} hours")
+    print(f"Total lines processed: {total_processed:,}")
+    print(f"Total matches: {total_matched:,}")
+    print(f"Total skipped: {total_skipped:,}")
+    print(f"Total file lines: {total_lines:,}")
+    print(f"Average processing speed: {total_processed / total_time:.0f} lines/sec")
+    print(f"Average time per file: {total_time / len(process_args):.1f}s")
+    print(f"Max lines per file limit: 10000")
+    print(f"Resume: based on output file")
     print("=" * 60)
     
-    # 写入最终完成标记
+    # Write final completion marker
     with open("job_finish.txt", 'a') as f:
         f.write(f'\nFinish all: {datetime.now()}\n')
         f.write(f'Total files in range: {len(curr_run_file_paths)}\n')

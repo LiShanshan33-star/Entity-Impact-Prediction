@@ -25,10 +25,10 @@ from preprocess_utils import *
 from features_utils import *
 from general_utils import *
 
-#####--------------Transformer 架构----------------------------#####
+#####--------------Transformer Architecture----------------------------#####
 
 class PositionalEncoding(nn.Module):
-    """位置编码"""
+    """Positional encoding."""
     def __init__(self, d_model, max_len=5000):
         super(PositionalEncoding, self).__init__()
         pe = torch.zeros(max_len, d_model)
@@ -44,17 +44,17 @@ class PositionalEncoding(nn.Module):
 
 
 class TransformerEncoderLayer(nn.Module):
-    """Transformer编码器层"""
+    """Transformer encoder layer."""
     def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1):
         super(TransformerEncoderLayer, self).__init__()
         self.self_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
         
-        # 前馈网络
+        # feedforward network
         self.linear1 = nn.Linear(d_model, dim_feedforward)
         self.dropout = nn.Dropout(dropout)
         self.linear2 = nn.Linear(dim_feedforward, d_model)
         
-        # 层归一化
+        # layer norm
         self.norm1 = nn.LayerNorm(d_model)
         self.norm2 = nn.LayerNorm(d_model)
         
@@ -65,13 +65,13 @@ class TransformerEncoderLayer(nn.Module):
         self.activation = nn.ReLU()
 
     def forward(self, src, src_mask=None, src_key_padding_mask=None):
-        # 自注意力
+        # self-attention
         src2 = self.self_attn(src, src, src, attn_mask=src_mask,
                               key_padding_mask=src_key_padding_mask)[0]
         src = src + self.dropout1(src2)
         src = self.norm1(src)
         
-        # 前馈网络
+        # feedforward network
         src2 = self.linear2(self.dropout(self.activation(self.linear1(src))))
         src = src + self.dropout2(src2)
         src = self.norm2(src)
@@ -79,7 +79,7 @@ class TransformerEncoderLayer(nn.Module):
 
 
 class FeatureProjection(nn.Module):
-    """特征投影层：将141维特征投影到Transformer维度"""
+    """feature projection ... 141feature projectionTransformer"""
     def __init__(self, input_dim, d_model):
         super(FeatureProjection, self).__init__()
         self.projection = nn.Sequential(
@@ -94,7 +94,7 @@ class FeatureProjection(nn.Module):
 
 
 class FeatureAggregator(nn.Module):
-    """特征聚合器：将多个特征进行聚合"""
+    """Feature aggregator: aggregate multiple features."""
     def __init__(self, d_model, num_heads=4):
         super(FeatureAggregator, self).__init__()
         self.cross_attn = nn.MultiheadAttention(d_model, num_heads, dropout=0.1)
@@ -109,7 +109,7 @@ class FeatureAggregator(nn.Module):
 
 class TransformerNetwork(nn.Module):
     """
-    Transformer架构的神经网络 - 修复维度问题
+    Transformer ... network -  ... 
     """
     def __init__(self, input_size, d_model=256, nhead=8, num_layers=4, 
                  dim_feedforward=1024, dropout=0.1, output_size=1):
@@ -119,13 +119,13 @@ class TransformerNetwork(nn.Module):
         self.input_size = input_size
         self.output_size = output_size
         
-        # 特征投影
+        # feature projection
         self.feature_proj = FeatureProjection(input_size, d_model)
         
-        # 位置编码
+        # positional encoding
         self.pos_encoder = PositionalEncoding(d_model)
         
-        # Transformer编码器层
+        # Transformerencoding
         encoder_layers = []
         for _ in range(num_layers):
             encoder_layers.append(
@@ -133,10 +133,10 @@ class TransformerNetwork(nn.Module):
             )
         self.transformer_encoder = nn.ModuleList(encoder_layers)
         
-        # 特征聚合层
+        # feature aggregation layer
         self.feature_aggregator = FeatureAggregator(d_model)
         
-        # 输出层 - 修复：确保输出维度正确
+        #  ...  -  ... 
         self.output_layer = nn.Sequential(
             nn.Linear(d_model, d_model // 2),
             nn.ReLU(),
@@ -147,7 +147,7 @@ class TransformerNetwork(nn.Module):
             nn.Linear(d_model // 4, output_size)
         )
         
-        # 初始化参数
+        #  ... 
         self._init_parameters()
         
     def _init_parameters(self):
@@ -158,29 +158,29 @@ class TransformerNetwork(nn.Module):
     def forward(self, x):
         batch_size = x.size(0)
         
-        # 将特征投影到Transformer维度 [batch, features] -> [batch, d_model]
+        # feature projectionTransformer [batch, features] -> [batch, d_model]
         x = self.feature_proj(x)  # [batch, d_model]
         
-        # 重塑为序列格式 [seq_len=1, batch, d_model]
+        #  ...  [seq_len=1, batch, d_model]
         x = x.unsqueeze(0)  # [1, batch, d_model]
         
-        # 添加位置编码
+        # positional encoding
         x = self.pos_encoder(x)
         
-        # 通过Transformer编码器层
+        # Transformerencoding
         for layer in self.transformer_encoder:
             x = layer(x)
         
-        # 特征聚合
+        # aggregation
         x = self.feature_aggregator(x, x)
         
-        # 移除序列维度 [1, batch, d_model] -> [batch, d_model]
+        #  ...  [1, batch, d_model] -> [batch, d_model]
         x = x.squeeze(0)  # [batch, d_model]
         
-        # 输出层 - 修复：确保输出形状正确
+        #  ...  -  ... 
         output = self.output_layer(x)  # [batch, output_size]
         
-        # 如果是二分类且output_size=1，压缩最后一维
+        #  ... output_size=1 ... 
         if self.output_size == 1:
             output = output.squeeze(1)  # [batch]
         
@@ -191,7 +191,7 @@ def train_model(model_semnet, device, train_input_data, test_input_data,
                 hyper_parameter, graph_parameter, user_parameter, 
                 save_net_folder, logs_file_name):
     """
-    训练Transformer模型 - 修复维度问题
+    Transformer -  ... 
     """
     year_start, years_delta, vertex_degree_cutoff, min_edges = graph_parameter
     batch_size, lr_enc, rnd_seed = hyper_parameter
@@ -225,15 +225,15 @@ def train_model(model_semnet, device, train_input_data, test_input_data,
         total_loss = 0
         
         for idx_dataset in range(len(data_sets)):
-            # 确保batch_size不超过数据集大小
+            # batch_size ... 
             current_batch_size = min(batch_size, len(data_sets[idx_dataset]))
             idx = torch.randint(0, len(data_sets[idx_dataset]), (current_batch_size,))
             data_train_samples = data_sets[idx_dataset][idx]
             
-            # 前向传播
-            calc_properties = model_semnet(data_train_samples)  # 已经是squeeze后的结果
+            #  ... 
+            calc_properties = model_semnet(data_train_samples)  #  ... squeeze ... 
             
-            # 修复：确保目标标签维度匹配
+            #  ... 
             if num_class <= 2:
                 curr_pred_one_hot = torch.tensor([idx_dataset] * current_batch_size, dtype=torch.float).to(device)
             else:
@@ -246,19 +246,19 @@ def train_model(model_semnet, device, train_input_data, test_input_data,
         optimizer_predictor.zero_grad()
         total_loss.backward()
         
-        # 梯度裁剪
+        #  ... 
         torch.nn.utils.clip_grad_norm_(model_semnet.parameters(), max_norm=1.0)
         
         optimizer_predictor.step()
         
-        # 评估
+        # 
         with torch.no_grad():
             model_semnet.eval()
             eval_datasets = flatten([train_data, test_data])
             all_real_loss = []
             
             for idx_dataset in range(len(eval_datasets)):
-                # 确保评估时不会超出范围
+                #  ... 
                 eval_size = min(size_of_loss_check, len(eval_datasets[idx_dataset]))
                 if eval_size == 0:
                     continue
@@ -284,7 +284,7 @@ def train_model(model_semnet, device, train_input_data, test_input_data,
                 train_loss_total.append(sum(all_real_loss[:num_class]))
                 test_loss_total.append(sum(all_real_loss[num_class:2 * num_class]))
                 
-                # 调整学习率
+                #  ... 
                 scheduler.step(test_loss_total[-1])
 
                 if iteration % 500 == 0:
@@ -301,7 +301,7 @@ def train_model(model_semnet, device, train_input_data, test_input_data,
                                     f'time: {time.time()-start_time:.2f}s')
                     start_time = time.time()
 
-                # 保存最佳模型
+                #  ... 
                 if len(test_loss_total) > 0 and test_loss_total[-1] == min(test_loss_total):
                     model_semnet.eval()
                     net_file = os.path.join(save_net_folder, f"transformer_net_year_{year_start}_delta_{years_delta}_class_{num_class}_{IR_Str}.pt")
@@ -310,7 +310,7 @@ def train_model(model_semnet, device, train_input_data, test_input_data,
                     torch.save(model_semnet.state_dict(), net_state_file)
                     model_semnet.train()
 
-                # 早停
+                # 
                 if len(test_loss_total) > 1000:
                     test_loss_moving_avg = sum(test_loss_total[-500:])
                     moving_avg.append(test_loss_moving_avg)
@@ -329,7 +329,7 @@ def train_model(model_semnet, device, train_input_data, test_input_data,
 def plot_train_loss(train_loss_total, test_loss_total, moving_avg, 
                     graph_parameter, user_parameter, store_file):
     """
-    绘制训练损失曲线
+     ... 
     """
     year_start, years_delta, vertex_degree_cutoff, min_edges = graph_parameter
     num_class, IR_num, split_type, out_norm = user_parameter
@@ -350,7 +350,7 @@ def plot_train_loss(train_loss_total, test_loss_total, moving_avg,
 
 def eval_model_in_batches(model, device, data_batch, data_feature, user_parameter):
     """
-    批量评估Transformer模型
+     ... Transformer
     """
     num_class, IR_num, split_type, out_norm = user_parameter
     
@@ -368,7 +368,7 @@ def eval_model_in_batches(model, device, data_batch, data_feature, user_paramete
     outputs = torch.cat(output_batches)
     outputs = outputs.cpu().numpy()
     
-    # 确保输出是一维数组
+    #  ... 
     if len(outputs.shape) > 1 and outputs.shape[1] == 1:
         outputs = outputs.flatten()
     
@@ -380,12 +380,12 @@ def eval_model_in_batches(model, device, data_batch, data_feature, user_paramete
     return nn_outputs
 
 
-# 主函数保持不变
+#  ... 
 def impact_classfication(full_train_data, data_feature_eval, solution_eval, 
                          pair_cf_parameter, hyper_parameter, graph_parameter, 
                          user_parameter, save_folders, logs_file_name):
     """
-    使用Transformer进行影响因子分类
+    Transformer ... 
     """
     node_cfeature_list, node_neighbor_list, num_neighbor_list, node_feature, node_cfeature = pair_cf_parameter
     batch_size, lr_enc, rnd_seed = hyper_parameter
@@ -399,7 +399,7 @@ def impact_classfication(full_train_data, data_feature_eval, solution_eval,
     torch.manual_seed(rnd_seed)
     np.random.seed(rnd_seed)
 
-    # 准备训练和测试数据
+    #  ... 
     with open(logs_file_name + "_logs.txt", "a") as myfile:
         myfile.write(f"\n1.1) {datetime.now()}: Prepare train and test data (Transformer)...")
 
@@ -410,7 +410,7 @@ def impact_classfication(full_train_data, data_feature_eval, solution_eval,
     pair_train, solution_train = get_pair_solution_datasets(dataset_train, hyper_parameter, user_parameter, logs_file_name)
     pair_test, solution_test = get_pair_solution_datasets(dataset_test, hyper_parameter, user_parameter, logs_file_name)
     
-    # 训练特征
+    #  ... 
     pair_feature_train, pair_cfeature_train = get_all_pair_features(
         node_cfeature_list, node_neighbor_list, num_neighbor_list, pair_train, logs_file_name
     )
@@ -419,7 +419,7 @@ def impact_classfication(full_train_data, data_feature_eval, solution_eval,
         pair_train, solution_train, node_pair_feature_train, user_parameter, logs_file_name
     )
     
-    # 测试特征
+    #  ... 
     pair_feature_test, pair_cfeature_test = get_all_pair_features(
         node_cfeature_list, node_neighbor_list, num_neighbor_list, pair_test, logs_file_name
     )
@@ -428,7 +428,7 @@ def impact_classfication(full_train_data, data_feature_eval, solution_eval,
         pair_test, solution_test, node_pair_feature_test, user_parameter, logs_file_name
     )
 
-    # 训练Transformer
+    # Transformer
     print(f"\n1.2) {datetime.now()}: Train Transformer Neural Network...")
     with open(logs_file_name + "_logs.txt", "a") as myfile:
         myfile.write(f"\n1.2) {datetime.now()}: Train Transformer Neural Network...")
@@ -436,7 +436,7 @@ def impact_classfication(full_train_data, data_feature_eval, solution_eval,
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     input_size = len(data_feature_train[0])  # 141
     
-    # Transformer参数
+    # Transformer
     d_model = 256
     nhead = 8
     num_layers = 4
@@ -448,7 +448,7 @@ def impact_classfication(full_train_data, data_feature_eval, solution_eval,
     else:
         output_size = num_class
     
-    # 使用修复后的Transformer模型
+    #  ... Transformer
     model_semnet = TransformerNetwork(
         input_size=input_size,
         d_model=d_model,
@@ -475,7 +475,7 @@ def impact_classfication(full_train_data, data_feature_eval, solution_eval,
     )
     plot_train_loss(train_loss, test_loss, moving_avg, graph_parameter, user_parameter, store_name)
 
-    # 计算AUC
+    # AUC
     print(f'\n1.3) {datetime.now()}: Computes the AUC for training and test data (Transformer)...')
     with open(logs_file_name + "_logs.txt", "a") as myfile:
         myfile.write(f"\n1.3) {datetime.now()}: Computes the AUC for training and test data (Transformer)...")
@@ -489,17 +489,17 @@ def impact_classfication(full_train_data, data_feature_eval, solution_eval,
         f"Transformer_Eval_Year_{year_start}_Delta_{years_delta}_Class_{num_class}_ROC_{IR_Str}.png"
     ]
     
-    # 训练集AUC
+    #  ... AUC
     output_nn = eval_model_in_batches(model_semnet, device, data_batch_size, data_feature_train, user_parameter)
     solution_arr = classify_solution(solution_train, user_parameter)
     train_auc_score = calculate_plot_ROC(solution_arr, output_nn, user_parameter, roc_curve_name[0], save_figure_folder)
     
-    # 测试集AUC
+    #  ... AUC
     output_nn = eval_model_in_batches(model_semnet, device, data_batch_size, data_feature_test, user_parameter)
     solution_arr = classify_solution(solution_test, user_parameter)
     test_auc_score = calculate_plot_ROC(solution_arr, output_nn, user_parameter, roc_curve_name[1], save_figure_folder)
 
-    # 验证集AUC
+    #  ... AUC
     if len(data_feature_eval) > 0:
         print(f'\n1.4) {datetime.now()}: Evaluate the AUC for future data (Transformer)...')
         with open(logs_file_name + "_logs.txt", "a") as myfile:
@@ -511,7 +511,7 @@ def impact_classfication(full_train_data, data_feature_eval, solution_eval,
     else:
         eval_auc_score = []
 
-    # 保存结果
+    #  ... 
     store_folder = os.path.join(
         save_result_folder, 
         f'Transformer_AUC_Report_Year_{year_start}_Class_{num_class}_{IR_Str}.txt'

@@ -243,7 +243,7 @@ class ACEDatasetNER(Dataset):
                 sentence_length = doc_sent_end - doc_sent_start
 
                 # could half_context_length < 0?
-                half_context_length = int((max_num_subwords - sentence_length) / 2)                             # 设置的最大subtokens长度允许在当前句子左或右能包含的context subtoken个数。         half_context_length | current sentence length | half_context_length
+                half_context_length = int((max_num_subwords - sentence_length) / 2)                             # subtokenscontext subtoken         half_context_length | current sentence length | half_context_length
 
                 if left_length < right_length:
                     left_context_length = min(left_length, half_context_length)
@@ -266,9 +266,9 @@ class ACEDatasetNER(Dataset):
                 
                 entity_infos = []
 
-                # 遍历所有的entities
-                for entity_start in range(left_context_length, left_context_length + sentence_length):                                          # entity start idx in input sequence. entity在当前输入的序列中的起始位置
-                    doc_entity_start = entity_start + doc_offset                                                                                # doc_entity_start: start idx in total text; entity在当前doc (包含许多句子)的起始位置
+                # entities
+                for entity_start in range(left_context_length, left_context_length + sentence_length):                                          # entity start idx in input sequence. entity
+                    doc_entity_start = entity_start + doc_offset                                                                                # doc_entity_start: start idx in total text; entitydoc ()
                     if doc_entity_start not in subword_start_positions:
                         continue
                     for entity_end in range(entity_start + 1, left_context_length + sentence_length + 1):
@@ -1536,43 +1536,6 @@ def main():
         tokenizer.save_pretrained(args.output_dir)
 
         torch.save(args, os.path.join(args.output_dir, 'training_args.bin'))
-
-
-    # Evaluation test file
-    # results = {'dev_best_result':best_result}
-    # if args.do_eval and args.local_rank in [-1, 0]:
-    #     checkpoints = [args.output_dir]
-
-
-    #     WEIGHTS_NAME = 'pytorch_model.bin'
-
-    #     if args.eval_all_checkpoints:
-    #         checkpoints = list(os.path.dirname(c) for c in sorted(glob.glob(args.output_dir + '/**/' + WEIGHTS_NAME, recursive=True)))
-
-    #     logger.info("Evaluate on test set")
-
-    #     logger.info("Evaluate the following checkpoints: %s", checkpoints)
-    #     for checkpoint in checkpoints:
-    #         global_step = checkpoint.split('-')[-1]
-
-    #         model = model_class.from_pretrained(checkpoint, config=config, args=args)
-
-    #         model.to(args.device)
-    #         test_file = os.path.join(args.data_dir, args.test_file)
-
-    #         result = evaluate(logger, args, model, tokenizer, file_path=test_file, prefix=global_step, do_test=not args.no_test)
-
-    #         result = dict((k + '_{}'.format(global_step), v) for k, v in result.items())
-    #         results.update(result)
-
-    # if args.do_train and args.local_rank in [-1, 0]:
-    #     output_eval_file = os.path.join(args.output_dir, "results.json")
-    #     json.dump(results, open(output_eval_file, "w"))
-    #     # logger.info("Result in checkpoint: %s", json.dumps(results))
-    #     res = {k:f'{v:.4f}' for k,v in results.items()}
-    #     logger.info(f"Test Results in last checkpoint: {res}")
-    
-
 
     #-------------------------------------------------------------
     # test all files

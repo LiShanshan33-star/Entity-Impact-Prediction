@@ -175,7 +175,7 @@ def get_pair_feature(node_neighbor: list, num_neighbor: np.ndarray, vertex_list:
             pre_index = n_v1 * n_v2
             
         if n_v1 == 0 and n_v2 == 0:
-            sod_index=0  # Sørensen–Dice coefficient
+            sod_index=0  # SørensenDice coefficient
         else:
             sod_index = 2*num_shared_neighbor / (n_v1 + n_v2)
             

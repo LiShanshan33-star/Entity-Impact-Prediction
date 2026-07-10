@@ -15,14 +15,14 @@ import pandas as pd
 import time
 import copy
 
-log_folder = "H:\\logs" # log folder
+log_folder = "./logs" # log folder
 if not os.path.exists(log_folder):
     os.makedirs(log_folder)
     
-data_folder=r"G:\output"
+data_folder=r"./data/output"
 data_file=os.path.join(data_folder,'merged_edgess.pkl.gz')   
 
-store_folder="G:\\data_concept_graph"
+store_folder="./data/data_concept_graph"
 cwd = os.getcwd()
 parent_dir = os.path.dirname(cwd) # get parent directory
 new_dir_path = os.path.join(parent_dir, store_folder)
@@ -42,13 +42,13 @@ with gzip.open(data_file, 'rb') as f: # load the edge list
 with open(logsfile, "a") as myfile:
     myfile.write(f"\n{datetime.now()}: Done, Total: {len(full_dynamic_edges)}; Elapsed time: {time.time() - starting_time} seconds\n")
 
-# 检查数据类型和结构
-print(f"\n数据类型: {type(full_dynamic_edges)}")
-print(f"第一个元素类型: {type(full_dynamic_edges[0]) if len(full_dynamic_edges) > 0 else 'N/A'}")
-print(f"第一个元素: {full_dynamic_edges[0] if len(full_dynamic_edges) > 0 else 'N/A'}")
+#  ... 
+print(f"\nData type: {type(full_dynamic_edges)}")
+print(f" ... : {type(full_dynamic_edges[0]) if len(full_dynamic_edges) > 0 else 'N/A'}")
+print(f" ... : {full_dynamic_edges[0] if len(full_dynamic_edges) > 0 else 'N/A'}")
 
-# 检查前几个数据项的结构
-print(f"\n检查前几个数据项的结构:")
+#  ... 
+print(f"\nChecking structure of first few data items:")
 for i in range(min(10, len(full_dynamic_edges))):
     item = full_dynamic_edges[i]
     if isinstance(item, tuple):
@@ -58,33 +58,33 @@ for i in range(min(10, len(full_dynamic_edges))):
     else:
         print(f"Item {i}: {type(item)}, content = {item}")
 
-# 根据实际数据结构处理
-# 情况1: 如果只是concept pairs（两个元素）
+#  ... 
+# 1:  ... concept pairs ... 
 if len(full_dynamic_edges) > 0 and isinstance(full_dynamic_edges[0], (tuple, list)) and len(full_dynamic_edges[0]) == 2:
-    print("\n检测到数据为概念对（concept pairs），将创建基础图结构")
+    print("\nDetected data as concept pairs, will create basic graph structure")
     
-    # 创建基础DataFrame，只包含概念对
+    #  ... DataFrame ... 
     full_graph_df = pd.DataFrame(full_dynamic_edges, columns=['concept1', 'concept2'])
     
-    # 添加默认的时间戳（可以使用当前时间或0）
+    #  ... 0
     full_graph_df['time'] = 0
     
-    # 添加默认的引用计数
+    #  ... 
     full_graph_df['ct'] = 0
     
-    # 添加年份列（2025-2012）
+    #  ... 2025-2012
     for year in range(2025, 2011, -1):
         full_graph_df[f'c{year}'] = 0
     
     with open(logsfile, "a") as myfile:
-        myfile.write(f"\n创建基础图结构，共 {len(full_graph_df)} 条边")
-        myfile.write(f"\n数据类型为概念对，已添加默认值")
+        myfile.write(f"\n ...  {len(full_graph_df)} ")
+        myfile.write(f"\n ... ")
     
 else:
-    # 情况2: 如果有完整数据，按原计划处理
-    print("\n处理完整动态图数据")
+    # 2:  ... 
+    print("\n ... ")
     
-    # 统计不同长度的项
+    #  ... 
     length_counts = {}
     invalid_items = []
     full_dynamic_edges_copy = []
@@ -101,7 +101,7 @@ else:
         
         try:
             if item_length >= 5 and item[4] is not None:
-                # 处理citation_per_year数据
+                # citation_per_year
                 if isinstance(item[4], list):
                     years_data = {year_data['year']: year_data['cited_by_count'] 
                                  for year_data in item[4] if isinstance(year_data, dict)}
@@ -112,10 +112,10 @@ else:
             else:
                 years_data = {}
                 
-            # 创建年份数据列表（从2025到2012）
+            #  ... 20252012
             new_list = [years_data.get(year, 0) for year in range(2025, 2011, -1)]
             
-            # 确保有足够的基本字段
+            #  ... 
             base_item = item[:4] if item_length >= 4 else item + [0] * (4 - item_length)
             full_dynamic_edges_copy.append(base_item + new_list)
             
@@ -130,7 +130,7 @@ else:
             with open(logsfile, "a") as myfile:
                 myfile.write(f"\nProcessing item {i+1}/{len(full_dynamic_edges)}")
     
-    # 输出统计信息
+    #  ... 
     with open(logsfile, "a") as myfile:
         myfile.write(f"\n\nProcessing completed!")
         myfile.write(f"\nLength distribution of original items: {length_counts}")
@@ -149,18 +149,18 @@ else:
         
         time_start = time.time()
         
-        # 创建DataFrame
+        # DataFrame
         columns = ['v1', 'v2', 'time', 'ct'] + [f'c{year}' for year in range(2025, 2011, -1)]
         full_graph_df = pd.DataFrame(full_graph, columns=columns)
         
-        # 转换数据类型
+        #  ... 
         for col in columns[:4]:
             full_graph_df[col] = pd.to_numeric(full_graph_df[col], errors='coerce')
     else:
-        print("没有有效数据可处理")
+        print(" ... ")
         full_graph_df = pd.DataFrame()
 
-# 保存DataFrame
+# DataFrame
 if len(full_graph_df) > 0:
     time_start = time.time()
     full_graph_df.to_parquet(store_data_file, compression='gzip')
@@ -168,13 +168,13 @@ if len(full_graph_df) > 0:
     with open(logsfile, "a") as myfile:
         myfile.write(f"\n{datetime.now()}: Done, full_graph: {len(full_graph_df)}; Elapsed time: {time.time() - time_start} seconds")
     
-    print(f"\n最终DataFrame形状: {full_graph_df.shape}")
-    print(f"DataFrame列: {full_graph_df.columns.tolist()}")
-    print(f"\n前5行数据:")
+    print(f"\nDataFrame: {full_graph_df.shape}")
+    print(f"DataFrame: {full_graph_df.columns.tolist()}")
+    print(f"\n5 ... :")
     print(full_graph_df.head())
 else:
-    print("没有数据可保存！")
+    print(" ... ")
     with open(logsfile, "a") as myfile:
-        myfile.write(f"\n{datetime.now()}: 错误 - 没有数据可保存！")
+        myfile.write(f"\n{datetime.now()}:  -  ... ")
 
-print(f"\n处理完成！")
+print(f"\n ... ")

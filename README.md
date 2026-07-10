@@ -11,7 +11,6 @@ This repository contains the complete source code and datasets for predicting th
 ```
 Entity-Impact-Prediction/
 ??? README.md
-??? LICENSE                            # Apache 2.0 License
 ??? .gitignore
 ??? src/
 ?   ??? hgere/                         # HGERE: Entity & Relation Extraction (adapted)
@@ -214,12 +213,6 @@ python src/impact4cast/train_model_2022_run_transformer.py
 Open the Jupyter notebooks in src/analysis/ to reproduce the analysis figures and statistics.
 
 ---
-
-## License
-
-This project is licensed under the Apache License 2.0. See the LICENSE file for details.
-
-The SciNLP dataset is licensed under CC BY-NC 4.0 (https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 ---
 

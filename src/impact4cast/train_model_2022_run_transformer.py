@@ -15,7 +15,7 @@ import torch.nn.functional as F
 import random, time
 import numpy as np
 import matplotlib
-matplotlib.use('Agg')  # 禁用弹窗，所有图直接保存到文件
+matplotlib.use('Agg')  # Disable interactive windows, save all figures to files
 import matplotlib.pyplot as plt
 from scipy import sparse
 from scipy.stats import rankdata
@@ -28,21 +28,21 @@ from sklearn.metrics import roc_auc_score, accuracy_score, roc_curve, auc
 from general_utils import *
 from preprocess_utils import *
 from features_utils import *
-from train_model_utils_transformer import *  # 改为transformer版本的utils
+from train_model_utils_transformer import *  # Use transformer version of utils
 import pyarrow.dataset as ds
 import gc
 import sys
 sys.stdout.reconfigure(encoding='utf-8')
 
-# ---- 随机等待，避免并发冲突 ----
+# ---- Random wait to avoid concurrent conflicts ----
 rn_time = random.random() * 30
 time.sleep(rn_time)
 
 
 def load_large_parquet_in_chunks(file_path, batch_size=300_000, sample_frac=None, verbose=False):
     """
-    分批读取大型 parquet 文件，返回 pandas.DataFrame (拼接所有块)。
-    这是一个便捷函数，若文件非常大应避免将所有块拼接到内存中使用。
+    Read large parquet file in batches, return pandas.DataFrame (concatenating all chunks).
+    This is a convenience function; avoid concatenating all chunks into memory for very large files.
     """
     import pyarrow.parquet as pq
 
@@ -55,7 +55,7 @@ def load_large_parquet_in_chunks(file_path, batch_size=300_000, sample_frac=None
         df_batch = batch.to_pandas()
         if sample_frac is not None and 0 < sample_frac < 1:
             df_batch = df_batch.sample(frac=sample_frac, random_state=42)
-        # 压缩数据类型以降低内存占用（按需）
+        # Compress data types to reduce memory usage (as needed)
         for col in df_batch.select_dtypes(include=["float64"]).columns:
             try:
                 df_batch[col] = df_batch[col].astype("float32")
@@ -80,25 +80,25 @@ def load_large_parquet_in_chunks(file_path, batch_size=300_000, sample_frac=None
     return df
 
 
-# ---------- memmap 写入工具（流式写入大训练表） ----------
+# ---------- memmap write utility (stream write large training table) ----------
 def write_full_train_to_memmap(yes_df, no_parquet_path, memmap_path, batch_size=300_000, dtype=np.float32, verbose=True):
     """
-    将 connected (yes_df) + unconnected (no_parquet_path) 以分块方式写入磁盘 memmap 文件。
-    - 如果 memmap_path 已存在并且形状匹配（rows, cols），则直接返回，不重复写入（支持续跑）。
-    - 返回 (memmap_path, total_rows, ncols)
+    Write connected (yes_df) + unconnected (no_parquet_path) to disk memmap file in chunks.
+    - If memmap_path exists and shape matches (rows, cols), return directly without rewriting (supports resume).
+    - Returns (memmap_path, total_rows, ncols)
     """
     import pyarrow.parquet as pq
 
-    # 确保 yes_df 列顺序为基准
+    # Ensure yes_df column order as baseline
     yes_cols = list(yes_df.columns)
     ncols = yes_df.shape[1]
 
-    # 统计 unconnected 总行数（从 parquet metadata）
+    # Count unconnected total rows (from parquet metadata)
     pf = pq.ParquetFile(no_parquet_path)
     try:
         no_n = pf.metadata.num_rows
     except Exception:
-        # 退回到手动遍历
+        # Fall back to manual iteration
         no_n = 0
         for rg in range(pf.num_row_groups):
             no_n += pf.metadata.row_group(rg).num_rows
@@ -106,7 +106,7 @@ def write_full_train_to_memmap(yes_df, no_parquet_path, memmap_path, batch_size=
     yes_n = len(yes_df)
     total_n = int(yes_n + no_n)
 
-    # 如果文件已存在并且大小匹配，则直接复用
+    # If file exists and size matches, reuse directly
     if os.path.exists(memmap_path):
         try:
             mm_existing = np.memmap(memmap_path, dtype=dtype, mode='r')
@@ -122,33 +122,33 @@ def write_full_train_to_memmap(yes_df, no_parquet_path, memmap_path, batch_size=
                 del mm_existing
         except Exception:
             if verbose:
-                print("⚠️ 检查已有 memmap 时出错，将重新写入。")
+                print("⚠️ Check existing memmap encountered error, will rewrite.")
 
-    # 创建 memmap 文件（可能需要磁盘空间 total_n * ncols * 4 bytes）
+    # Create memmap file (may need disk space total_n * ncols * 4 bytes)
     if verbose:
         print(f"⏳ Creating memmap: {memmap_path}, rows={total_n}, cols={ncols}, estimated size={total_n * ncols * 4 / (1024**3):.2f} GiB")
     mm = np.memmap(memmap_path, dtype=dtype, mode='w+', shape=(total_n, ncols))
 
-    # 写入 yes part
+    # Write yes part
     if yes_n > 0:
         mm[:yes_n, :] = yes_df.values.astype(dtype)
     offset = yes_n
 
-    # 逐块写入 no parquet
+    # chunkWrite no parquet
     written = 0
     for i, batch in enumerate(pf.iter_batches(batch_size=batch_size)):
         df_chunk = batch.to_pandas()
-        # 补齐缺失列
+        # Fill missing columns
         for col in yes_cols:
             if col not in df_chunk.columns:
-                # 默认值：num -> 0, citation_m -> 0.0, 其他 -> 0
+                # Default values:num -> 0, citation_m -> 0.0, others -> 0
                 if col == 'num':
                     df_chunk[col] = 0
                 elif col == 'citation_m':
                     df_chunk[col] = 0.0
                 else:
                     df_chunk[col] = 0
-        df_chunk = df_chunk[yes_cols]  # 对齐列顺序
+        df_chunk = df_chunk[yes_cols]  # Align column order
         arr = df_chunk.values.astype(dtype)
         mm[offset: offset + arr.shape[0], :] = arr
         offset += arr.shape[0]
@@ -179,14 +179,14 @@ if __name__ == '__main__':
     min_edges = 1
     years_delta = 3
     
-    # 修改：使用2019年数据训练，预测2025年（2025 - 3 = 2022，但我们需要2019年的训练数据）
-    # 对于预测2025年，我们使用2019年作为训练基础年（2019 + 3 = 2022，但实际预测2025需要更远的数据）
-    # 这里我们保持训练逻辑不变，但调整目标预测年份
-    year_start = 2019  # 训练基础年设为2019
+    # Modified: using2019data for training, predicting2025year (2025 - 3 = 2022, but we need2019training data)
+    # For predicting2025year, we use2019year as training baseyear (2019 + 3 = 2022, but actual prediction2025needs farther data)
+    # Here we keep training logic unchanged but adjust target prediction year
+    year_start = 2019  # Training base year set to2019
     
     graph_parameter = [year_start, years_delta, vertex_degree_cutoff, min_edges]
 
-    # ---- 文件夹准备 ----
+    # ---- Folder preparation ----
     save_folders, log_folder = make_folders(year_start, split_type, num_class, "train")
     # Ensure a folder for figures (all plots will be saved here)
     figs_folder = save_folders.get('figs') if isinstance(save_folders, dict) and 'figs' in save_folders else os.path.join(log_folder, "figures")
@@ -197,24 +197,24 @@ if __name__ == '__main__':
     with open(log_run + "_logs.txt", "a", encoding='utf-8') as myfile:
         myfile.write(f"\n\nstart: {datetime.now()} - Training with 2019 data for 2025 prediction\n")
 
-    # 改进部分：按列和年份选择读取 parquet，降低内存占用
+    # Improvement: read parquet by columns and years parquet, reduce memory usage
     start_time = time.time()
     data_folder = "data_concept_graph"
     graph_file = os.path.join(data_folder, "full_dynamic_graph.parquet")
 
-    # 你希望加载的时间范围，例如 2016–2019（包含训练所需年份）
+    # Time range to load, e.g. 2016-2019(includes years needed for training)
     years_to_load = list(range(2016, 2020))  # 2016-2019
 
     try:
         dataset = ds.dataset(graph_file, format="parquet")
 
-        # 自动检测数据中存在哪些 cYYYY 列
+        # Auto-detect which cYYYY columns
         available_cols = dataset.schema.names
         base_cols = ["v1", "v2", "time", "ct"]
         year_cols = [f"c{y}" for y in years_to_load if f"c{y}" in available_cols]
         cols_to_load = base_cols + year_cols
 
-        print(f"正在加载列: {cols_to_load}")
+        print(f"Loadingcolumns: {cols_to_load}")
 
         table = dataset.to_table(columns=cols_to_load)
         full_dynamic_graph = table.to_pandas()
@@ -222,9 +222,9 @@ if __name__ == '__main__':
         del table, dataset
         gc.collect()
 
-        print(f"✅ 数据加载完成，共 {len(full_dynamic_graph)} 行。")
+        print(f"✅ Data load complete, total: {len(full_dynamic_graph)} rows.")
     except Exception as e:
-        print(f"⚠️ pyarrow.dataset 加载失败，退回到分批读取: {e}")
+        print(f"⚠️ pyarrow.dataset load failed, falling back to batch read: {e}")
         import pyarrow.parquet as pq
         pf = pq.ParquetFile(graph_file)
         dfs = []
@@ -243,7 +243,7 @@ if __name__ == '__main__':
             f"{len(full_dynamic_graph)}; elapsed_time: {time.time() - start_time}\n"
         )
 
-    # ---- 后续逻辑保持一致 ----
+    # ---- Subsequent logic remains consistent ----
     feature_folder = "data_for_features"
     start_time = time.time()
     adj_mat_sparse = []
@@ -281,47 +281,47 @@ if __name__ == '__main__':
 
     pair_cf_parameter = [vc_feature_list, node_neighbor_list, num_neighbor_list, vertex_features, vertex_cfeatures]
 
-    # ---- 训练集 ----
+    # ---- Training set ----
     train_data_folder = 'data_pair_solution'
     
-    # 注意：这些文件名可能需要根据实际数据调整
-    # 假设我们有2019年的训练对数据
+    # Note: these filenames may need adjustment based on actual data
+    # Assuming we have2019training pair data
     train_pair_file1 = os.path.join(train_data_folder, f"unconnected_{year_start}_pair_solution_connected_{year_start + years_delta}.parquet")
     train_pair_file2 = os.path.join(train_data_folder, f"unconnected_{year_start}_pair_solution_unconnected_{year_start + years_delta}.parquet")
 
-    # 使用分块加载已连接样本（一般较小）
+    # Use chunked loading for connected samples (usually smaller)
     time_start = time.time()
     train_pair_data_yes = load_large_parquet_in_chunks(train_pair_file1, batch_size=300_000, sample_frac=None, verbose=True)
     with open(log_run + "_logs.txt", "a", encoding='utf-8') as myfile:
         myfile.write(f"\nDone, read connected: {len(train_pair_data_yes)}; elapsed_time: {time.time() - time_start}")
 
-    # 现在采用 memmap 流式写入完整训练集（磁盘-backed），避免一次性 OOM
+    # Now use memmap streamWritecompleteTraining set(disk-backed), avoid OOM OOM
     memmap_file = os.path.join(train_data_folder, f"full_train_data_{year_start}_to_{year_start+years_delta}_for_2025.dat")
     memmap_meta_file = memmap_file + ".meta"
     try:
         memmap_path, total_rows, ncols = write_full_train_to_memmap(train_pair_data_yes, train_pair_file2, memmap_file, batch_size=300_000, dtype=np.float32, verbose=True)
     except Exception as e:
-        print(f"❌ 写入 memmap 失败: {e}")
+        print(f"❌ Write memmap failed: {e}")
         raise
 
-    # 以 memmap 形式打开 full_train_data（不会一次性载入内存）
+    # as memmap format open full_train_data(will not load all into memory)
     full_train_data = np.memmap(memmap_path, dtype=np.float32, mode='r', shape=(int(total_rows), int(ncols)))
     with open(log_run + "_logs.txt", "a", encoding='utf-8') as myfile:
         myfile.write(f"\n{datetime.now()}: Done, prepared full_train_data memmap: {memmap_path}; rows={total_rows}; cols={ncols}\n")
 
-    # 释放不再需要的内存
+    # Release memory no longer needed
     try:
         del full_dynamic_graph
     except Exception:
         pass
     gc.collect()
 
-    # ---- 验证集（这里我们可能没有2022年的验证数据，但可以保留原验证逻辑）----
-    # 注意：对于2025年预测，验证集可能需要调整
+    # ---- Validation set (we may not have 2022 validation data, but keep original validation logic) ----
+    # Note: for2025year prediction,Validation setmay need adjustment
     eval_folder = "data_eval"
     start_time = time.time()
     
-    # 尝试加载验证数据，如果不存在则创建空数组
+    # Try loading validation data, create empty array if not exists
     try:
         eval_file = os.path.join(eval_folder, "data_eval_pair_solution.parquet")
         if os.path.exists(eval_file):
@@ -333,10 +333,10 @@ if __name__ == '__main__':
                 myfile.write(f"finish loading eval_data_features; {time.time() - start_time}")
         else:
             eval_data_solution = np.array([])
-            print("⚠️ 验证集文件不存在，将使用空数组")
+            print("WARNING: Validation set file not found, using empty array")
     except Exception as e:
         eval_data_solution = np.array([])
-        print(f"⚠️ 加载验证集失败: {e}")
+        print(f"WARNING: Failed to load validation set: {e}")
 
     start_time = time.time()
     try:
@@ -350,14 +350,14 @@ if __name__ == '__main__':
                 myfile.write(f"\nfinish loading eval_data_solution; {time.time() - start_time}")
         else:
             eval_data_features = np.array([])
-            print("⚠️ 验证集特征文件不存在，将使用空数组")
+            print("WARNING: Validation feature file not found, using empty array")
     except Exception as e:
         eval_data_features = np.array([])
-        print(f"⚠️ 加载验证集特征失败: {e}")
+        print(f"WARNING: Failed to load validation features: {e}")
 
-    # ---- 训练循环（不改 impact_classfication 的调用接口）----
+    # ---- Training loop (does not change impact_classfication call interface) ----
     IR_start = 1
-    IR_end = 40  # 可以根据需要调整，原代码是40
+    IR_end = 40  # Can be adjusted as needed, original code uses 40
     IR_count = IR_start
     while IR_count <= IR_end:
         num_impact = random.randint(IR_start, IR_end)
@@ -376,7 +376,7 @@ if __name__ == '__main__':
             graph_parameter = [year_start, years_delta, vertex_degree_cutoff, min_edges]
             user_parameter = [num_class, IR_num, split_type, out_norm]
 
-            # 将 memmap 作为 full_train_data 传入
+            # Pass memmap as full_train_data
             try:
                 impact_classfication(
                     full_train_data,
@@ -389,11 +389,11 @@ if __name__ == '__main__':
                     save_folders,
                     logs_file_name
                 )
-                print(f"✅ 完成训练 IR={num_impact}")
+                print(f"DONE: Training complete for IR={num_impact}")
             except Exception as e:
                 with open(logs_file_name + "_logs.txt", "a", encoding='utf-8') as myfile:
                     myfile.write(f"\nError when running impact_classfication for IR {IR_num}: {e}\n")
-                print(f"❌ Error in impact_classfication for IR {IR_num}: {e}")
+                print(f"ERROR: Error in impact_classfication for IR {IR_num}: {e}")
                 IR_count += 1
                 continue
 
@@ -407,4 +407,4 @@ if __name__ == '__main__':
     with open(log_run + "_logs.txt", "a", encoding='utf-8') as myfile:
         myfile.write(f"\nfinish: {datetime.now()} - Completed training with 2019 data for 2025 prediction\n\n")
         
-    print(f"🎉 所有训练完成！模型保存在 {log_folder}")
+    print(f"🎉 All training complete! Models saved in {log_folder}")
